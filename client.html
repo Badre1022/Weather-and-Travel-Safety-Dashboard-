@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+  <title>Weather & Travel Safety Dashboard</title>
+  <style>
+    :root {
+      --p1: #667eea;
+      --p2: #764ba2;
+      --ok: #1fa97a;
+      --warn: #f4b400;
+      --bad: #e53935;
+      --fg: #2c2c2c;
+      --muted: #6b7280;
+      --card: #ffffff;
+      --bg: linear-gradient(135deg, var(--p1) 0%, var(--p2) 100%);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue",
+        Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      background: var(--bg);
+      min-height: 100vh;
+      padding: 24px;
+      color: var(--fg);
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+      padding: 36px;
+    }
+    header { text-align: center; margin-bottom: 28px; }
+    header h1 { font-size: 2.2rem; margin-bottom: 8px; }
+    header p { color: var(--muted); }
+    .search {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      max-width: 620px;
+      margin: 24px auto 10px;
+    }
+    .search input, .search select {
+      padding: 14px 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 14px;
+      font-size: 1rem;
+      outline: none;
+      transition: 0.2s border, 0.2s box-shadow;
+    }
+    .search input:focus, .search select:focus {
+      border-color: var(--p1);
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.12);
+    }
+    .btn {
+      padding: 14px 18px;
+      border: none;
+      border-radius: 14px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(45deg, var(--p1), var(--p2));
+      cursor: pointer;
+      transition: 0.15s transform, 0.2s box-shadow, 0.2s opacity;
+      white-space: nowrap;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(118, 75, 162, 0.25); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+    .row { display: grid; gap: 22px; grid-template-columns: repeat(12, 1fr); }
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+    }
+    .span-6 { grid-column: span 6; }
+    .span-12 { grid-column: span 12; }
+    .section-title {
+      font-weight: 800; letter-spacing: .2px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+    }
+    .big-temp { font-size: 3.2rem; font-weight: 800; color: var(--p1); }
+    .muted { color: var(--muted); }
+    .kv { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; }
+    .kv .item { background: #f8fafc; border-radius: 12px; padding: 10px; text-align: center; }
+    .kv .lab { font-size: .85rem; color: var(--muted); }
+    .kv .val { font-weight: 800; margin-top: 4px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border-radius: 999px; font-weight: 700; margin: 6px 0 10px;
+    }
+    .ok { background: #e7f7f1; color: #0e6f53; border: 1px solid #cdeee4; }
+    .warn { background: #fff8e1; color: #8a6d00; border: 1px solid #ffecb5; }
+    .bad { background: #fde7e6; color: #8a1e1c; border: 1px solid #f8c8c6; }
+    .list { display: grid; gap: 8px; }
+    .list p { background: #f8fafc; border-radius: 12px; padding: 10px 12px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; margin-top: 14px; }
+    .success { display: none; background: #e7f7f1; color: #0e6f53; padding: 10px 14px; border-radius: 12px; border: 1px solid #cdeee4; font-weight: 700; }
+    .error { display: none; background: #fde7e6; color: #8a1e1c; padding: 10px 14px; border-radius: 12px; border: 1px solid #f8c8c6; }
+    .loading { display: none; text-align: center; padding: 20px; }
+    .spinner {
+      width: 44px; height: 44px; border: 4px solid #e5e7eb; border-top: 4px solid var(--p1);
+      border-radius: 50%; margin: 0 auto 8px; animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 860px) { .span-6 { grid-column: span 12; } .kv { grid-template-columns: repeat(2,1fr); } }
+    footer { text-align: center; margin-top: 18px; color: #fff; opacity: .8; font-size: .9rem; }
+    .tiny { font-size: .85rem; color: var(--muted); }
+    code.inline { background: #f1f5f9; padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🌍 Weather & Travel Safety Dashboard</h1>
+      <p class="muted">Real-time weather + COVID-19 + travel advisory, aggregated and saved to your backend.</p>
+    </header>
+
+    <form class="search" id="form">
+      <input id="city" type="text" placeholder="Enter a city (e.g., Colombo)" required />
+      <select id="country">
+        <option value="">Country (optional)</option>
+        <!-- A few common options for convenience -->
+        <option value="LK">Sri Lanka</option>
+        <option value="IN">India</option>
+        <option value="US">United States</option>
+        <option value="GB">United Kingdom</option>
+        <option value="AU">Australia</option>
+        <option value="SG">Singapore</option>
+      </select>
+      <button class="btn" type="submit" id="go">🔎 Get Info</button>
+    </form>
+
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <div class="muted">Fetching live data…</div>
+    </div>
+
+    <div id="err" class="error"></div>
+
+    <section class="row" id="results" style="display:none;">
+      <div class="span-12 card" id="titleCard">
+        <div class="section-title">📍 Destination</div>
+        <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:baseline; justify-content:space-between;">
+          <div>
+            <h2 id="place" style="font-size:1.6rem;"></h2>
+            <p class="tiny" id="coords"></p>
+          </div>
+          <p class="tiny" id="retrieved"></p>
+        </div>
+      </div>
+
+      <div class="span-6 card">
+        <div class="section-title">🌤️ Weather</div>
+        <div style="display:flex; align-items:center; gap:18px; margin: 6px 0 10px;">
+          <div class="big-temp" id="temp">--°C</div>
+          <div>
+            <div id="desc" style="font-weight:700;">—</div>
+            <div class="muted" id="feels">Feels like —</div>
+          </div>
+        </div>
+        <div class="kv">
+          <div class="item"><div class="lab">Humidity</div><div class="val" id="hum">—</div></div>
+          <div class="item"><div class="lab">Wind</div><div class="val" id="wind">—</div></div>
+          <div class="item"><div class="lab">Pressure</div><div class="val" id="press">—</div></div>
+          <div class="item"><div class="lab">Visibility</div><div class="val" id="vis">—</div></div>
+        </div>
+      </div>
+
+      <div class="span-6 card">
+        <div class="section-title">🛡️ Travel Advisory</div>
+        <div id="advisoryBadge" class="badge warn">Checking…</div>
+        <div class="list" id="advisoryList">
+          <p>Loading advisory details…</p>
+        </div>
+      </div>
+
+      <div class="span-12 card">
+        <div class="section-title">🦠 COVID-19 Snapshot</div>
+        <div class="kv" style="grid-template-columns: repeat(5, 1fr);">
+          <div class="item"><div class="lab">Total Cases</div><div class="val" id="c_cases">—</div></div>
+          <div class="item"><div class="lab">Today Cases</div><div class="val" id="c_today">—</div></div>
+          <div class="item"><div class="lab">Deaths</div><div class="val" id="c_deaths">—</div></div>
+          <div class="item"><div class="lab">Recovered</div><div class="val" id="c_rec">—</div></div>
+          <div class="item"><div class="lab">Active</div><div class="val" id="c_active">—</div></div>
+        </div>
+      </div>
+
+      <div class="span-12 card">
+        <div class="section-title">📤 Save to Backend</div>
+        <p class="tiny" style="margin-bottom:10px;">
+          Sends a single aggregated JSON to your server’s <code class="inline">/api/weather-safety-data</code>.
+        </p>
+        <div class="actions">
+          <button id="save" class="btn">💾 Save Report</button>
+          <span id="saved" class="success">✅ Saved successfully</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer>Built for Service-Oriented Computing mini-project</footer>
+
+  <script>
+    /**
+     * 🔧 CONFIG — Replace with your real values
+     */
+    const OPENWEATHERMAP_API_KEY = "YOUR_OPENWEATHERMAP_API_KEY"; // https://openweathermap.org/api
+    const BACKEND_BASE_URL = "http://localhost:3000";             // Your Express server
+    const BACKEND_API_KEY = "YOUR_BACKEND_FIXED_API_KEY";         // Matches process.env.API_KEY on server
+    const OAUTH_ACCESS_TOKEN = "MOCK_OAUTH_TOKEN";                 // If you wire OAuth later, replace it
+
+    /**
+     * 👉 Flow
+     * 1) Geocode city → lat/lon & country code (OpenWeatherMap Geocoding)
+     * 2) Weather by lat/lon (OpenWeatherMap Current Weather)
+     * 3) COVID by country (disease.sh)
+     * 4) Advisory by country code (travel-advisory.info)
+     * 5) Aggregate → display → optional save to backend
+     */
+
+    const el = (id) => document.getElementById(id);
+    const fmt = (n) => (n === null || n === undefined || isNaN(n) ? "—" : Number(n).toLocaleString());
+    const results = el("results");
+    const err = el("err");
+    const loading = el("loading");
+    const savedBanner = el("saved");
+
+    let aggregated = null; // holds the latest combined JSON
+
+    el("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      err.style.display = "none";
+      savedBanner.style.display = "none";
+      results.style.display = "none";
+      loading.style.display = "block";
+      el("go").disabled = true;
+
+      try {
+        const city = el("city").value.trim();
+        const cc = el("country").value.trim(); // optional ISO-2
+
+        // 1) Geocoding
+        const geo = await geocodeCity(city, cc);
+        if (!geo) throw new Error("Could not find that city. Try including a country.");
+
+        // 2) Weather
+        const weather = await fetchWeather(geo.lat, geo.lon);
+
+        // 3) COVID (by country name)
+        const covid = await fetchCovid(geo.countryName);
+
+        // 4) Advisory (by country code)
+        const advisory = await fetchAdvisory(geo.countryCode);
+
+        aggregated = buildPayload(geo, weather, covid, advisory);
+
+        // Render UI
+        renderAll(aggregated);
+
+        results.style.display = "grid";
+      } catch (e2) {
+        console.error(e2);
+        err.textContent = "⚠️ " + (e2.message || "Something went wrong while fetching data.");
+        err.style.display = "block";
+      } finally {
+        loading.style.display = "none";
+        el("go").disabled = false;
+      }
+    });
+
+    el("save").addEventListener("click", async () => {
+      if (!aggregated) return;
+      savedBanner.style.display = "none";
+      el("save").disabled = true;
+      el("save").textContent = "💾 Saving…";
+      try {
+        const res = await fetch(`${BACKEND_BASE_URL}/api/weather-safety-data`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": BACKEND_API_KEY,
+            // If you implement real OAuth, include:
+            Authorization: `Bearer ${OAUTH_ACCESS_TOKEN}`,
+          },
+          body: JSON.stringify(aggregated),
+        });
+        if (!res.ok) {
+          const j = await safeJSON(res);
+          throw new Error(j?.error || `Save failed (${res.status})`);
+        }
+        savedBanner.style.display = "inline-flex";
+      } catch (e) {
+        alert(e.message || "Failed to save report.");
+      } finally {
+        el("save").disabled = false;
+        el("save").textContent = "💾 Save Report";
+      }
+    });
+
+    async function geocodeCity(city, countryCode) {
+      // OpenWeatherMap Geocoding API
+      // https://openweathermap.org/api/geocoding-api
+      const q = encodeURIComponent(city);
+      const ccParam = countryCode ? `,${countryCode}` : "";
+      const url = `https://api.openweathermap.org/geo/1.0/direct?q=${q}${ccParam}&limit=1&appid=${OPENWEATHERMAP_API_KEY}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Geocoding failed.");
+      const arr = await res.json();
+      if (!Array.isArray(arr) || arr.length === 0) return null;
+      const g = arr[0];
+      return {
+        name: g.name,
+        lat: g.lat,
+        lon: g.lon,
+        countryCode: g.country, // ISO-2
+        countryName: await iso2ToName(g.country),
+      };
+    }
+
+    async function iso2ToName(iso2) {
+      // REST Countries simple lookup
+      // https://restcountries.com/#endpoints-alpha
+      const res = await fetch(`https://restcountries.com/v3.1/alpha/${iso2}`);
+      if (!res.ok) return iso2;
+      const js = await res.json();
+      return js?.[0]?.name?.common || iso2;
+    }
+
+    async function fetchWeather(lat, lon) {
+      // Current Weather
+      const url =
+        `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}` +
+        `&appid=${OPENWEATHERMAP_API_KEY}&units=metric`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Weather fetch failed.");
+      return res.json();
+    }
+
+    async function fetchCovid(countryName) {
+      // disease.sh by country
+      const url = `https://disease.sh/v3/covid-19/countries/${encodeURIComponent(countryName)}?strict=true`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("COVID-19 fetch failed.");
+      return res.json();
+    }
+
+    async function fetchAdvisory(iso2) {
+      // travel-advisory.info API: returns map keyed by ISO2
+      // Example: https://www.travel-advisory.info/api?countrycode=LK
+      const url = `https://www.travel-advisory.info/api?countrycode=${encodeURIComponent(iso2)}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Travel advisory fetch failed.");
+      const js = await res.json();
+      return js?.data?.[iso2] || null;
+    }
+
+    function buildPayload(geo, w, c, adv) {
+      const nowISO = new Date().toISOString();
+      // Normalize advisory fields
+      const advisoryScore = adv?.advisory?.score ?? null;
+      const advisoryMsg = adv?.advisory?.message ?? "No message";
+      const advisoryUpdated = adv?.advisory?.updated ?? nowISO;
+
+      return {
+        location: {
+          country: geo.countryName,
+          city: geo.name,
+          latitude: geo.lat,
+          longitude: geo.lon,
+        },
+        covid19: {
+          updated: new Date(c?.updated || c?.todayRecovered || Date.now()).toISOString(),
+          cases: c?.cases ?? null,
+          todayCases: c?.todayCases ?? null,
+          deaths: c?.deaths ?? null,
+          todayDeaths: c?.todayDeaths ?? null,
+          recovered: c?.recovered ?? null,
+          active: c?.active ?? null,
+          critical: c?.critical ?? null,
+          casesPerOneMillion: c?.casesPerOneMillion ?? null,
+          deathsPerOneMillion: c?.deathsPerOneMillion ?? null,
+        },
+        weather: {
+          temperature: {
+            current: w?.main?.temp ?? null,
+            feels_like: w?.main?.feels_like ?? null,
+            min: w?.main?.temp_min ?? null,
+            max: w?.main?.temp_max ?? null,
+          },
+          humidity: w?.main?.humidity ?? null,
+          pressure: w?.main?.pressure ?? null,
+          wind_speed: w?.wind?.speed ?? null,
+          description: w?.weather?.[0]?.description ?? "",
+          icon: w?.weather?.[0]?.icon ?? "",
+        },
+        travelAdvisory: {
+          score: advisoryScore,
+          message: advisoryMsg,
+          lastUpdated: advisoryUpdated,
+        },
+        metadata: {
+          timestamp: nowISO,
+          source_apis: [
+            "https://api.openweathermap.org",
+            "https://disease.sh",
+            "https://travel-advisory.info",
+            "https://restcountries.com",
+          ],
+        },
+      };
+    }
+
+    function renderAll(payload) {
+      // Title + coords
+      el("place").textContent = `${payload.location.city}, ${payload.location.country}`;
+      el("coords").textContent = `Lat ${payload.location.latitude.toFixed(3)}, Lon ${payload.location.longitude.toFixed(3)}`;
+      el("retrieved").textContent = `Retrieved: ${new Date(payload.metadata.timestamp).toLocaleString()}`;
+
+      // Weather
+      el("temp").textContent = `${Math.round(payload.weather.temperature.current)}°C`;
+      const desc = cap(payload.weather.description || "—");
+      el("desc").textContent = desc;
+      el("feels").textContent = `Feels like ${Math.round(payload.weather.temperature.feels_like)}°C`;
+      el("hum").textContent = `${fmt(payload.weather.humidity)}%`;
+      el("wind").textContent = `${fmt(Math.round((payload.weather.wind_speed || 0) * 3.6))} km/h`;
+      el("press").textContent = `${fmt(payload.weather.pressure)} hPa`;
+      // visibility not provided by normalized weather; show from original if available:
+      el("vis").textContent = "—";
+
+      // Advisory
+      renderAdvisory(payload.travelAdvisory);
+
+      // COVID
+      el("c_cases").textContent = fmt(payload.covid19.cases);
+      el("c_today").textContent = fmt(payload.covid19.todayCases);
+      el("c_deaths").textContent = fmt(payload.covid19.deaths);
+      el("c_rec").textContent = fmt(payload.covid19.recovered);
+      el("c_active").textContent = fmt(payload.covid19.active);
+    }
+
+    function renderAdvisory(ad) {
+      const badge = el("advisoryBadge");
+      const list = el("advisoryList");
+      badge.className = "badge";
+      let cls = "warn", label = "Exercise Caution";
+      if (ad.score != null) {
+        if (ad.score <= 2.5) { cls = "ok"; label = "Generally Safe"; }
+        else if (ad.score > 3.5) { cls = "bad"; label = "High Risk"; }
+      }
+      badge.classList.add(cls);
+      badge.textContent = `${label} · Score ${ad.score?.toFixed(2) ?? "—"}`;
+
+      list.innerHTML = "";
+      const p1 = document.createElement("p");
+      p1.innerHTML = `<strong>Advisory:</strong> ${escapeHTML(ad.message || "—")}`;
+      const p2 = document.createElement("p");
+      p2.innerHTML = `<strong>Last Updated:</strong> ${new Date(ad.lastUpdated || Date.now()).toLocaleString()}`;
+      list.appendChild(p1);
+      list.appendChild(p2);
+    }
+
+    function cap(s) { return (s || "").slice(0,1).toUpperCase() + (s || "").slice(1); }
+    function escapeHTML(s) {
+      return (s || "").replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+    }
+    async function safeJSON(res) { try { return await res.json(); } catch { return null; } }
+  </script>
+</body>
+</html>
